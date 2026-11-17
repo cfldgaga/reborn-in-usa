@@ -48,7 +48,7 @@ box-shadow: 0 14px 34px rgba(160,50,0,.35), inset 0 0 0 4px rgba(255,255,255,.5)
 position:relative;
 transition: transform 3.6s cubic-bezier(.12,.72,.08,1);
 }
-.wheel.seg-label {
+.wheel .seg-label {
 position:absolute; left:50%; top:50%; width:120px; margin-left:-60px;
 text-align:center; font-size:14px; font-weight:700; color:#5b2a00;
 pointer-events:none;
@@ -264,7 +264,7 @@ var friendBanner = document.getElementById("friendBanner");
 // 砸出自己的结果后：把战绩同步到页面标题、分享描述与地址参数
 function setShareResult(idx) {
 var t = TIERS[idx];
-var s = "我砸出了！超过约" + t.beat + "%的美国人，不服来战！";
+var s = "我砸出了【" + t.name + "】！超过约" + t.beat + "%的美国人，不服来战！";
 document.title = s;
 ["metaDesc", "ogDesc", "twDesc"].forEach(function(id) {
 var el = document.getElementById(id);
@@ -454,10 +454,10 @@ var idx = parseInt(m[1], 10);
 if (isNaN(idx) || idx < 0 || idx > 9) return;
 friendMode = true;
 var t = TIERS[idx];
-friendBanner.textContent = "你朋友刚砸出，不服？砸一下";
+friendBanner.textContent = "你朋友刚砸出【" + t.name + "】，不服？砸一下";
 friendBanner.classList.add("on");
 resultTitle.textContent = "朋友的战绩";
-document.title = "朋友砸出了！不服？你也来砸一下";
+document.title = "朋友砸出了【" + t.name + "】！不服？你也来砸一下";
 spinBtn.textContent = "我也砸一下";
 // 转盘无动画直接停在朋友那一档
 var center = idx * 36;
