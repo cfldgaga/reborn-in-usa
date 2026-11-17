@@ -75,6 +75,7 @@ transition: transform.08s, box-shadow.08s;
 .total-line { text-align:center; font-size:14px; font-weight:700; color:#ffe9a8; margin: 2px 0 6px; min-height:20px;}
 .my-no { margin-top:12px; display:none; background:#e63946; color:#fff; font-weight:800; font-size:16px; padding:8px 16px; border-radius:999px;}
 .my-no.on { display:inline-block;}
+.x-btn { margin-top:10px; background:#000; color:#fff; border:none; font-size:15px; font-weight:700; padding:10px 22px; border-radius:999px; cursor:pointer;}
 
 .result { display:none; margin-top: 22px;}
 .result.show { display:block; animation: pop.45s ease;}
@@ -183,6 +184,8 @@ padding:10px 26px; border-radius:999px;}
 <button type="button" class="dl-btn" id="dlBtn">💾 保存海报图</button>
 <br>
 <button type="button" class="copy-btn" id="copyBtn">🔗 复制战绩链接</button>
+<br>
+<button type="button" class="x-btn" id="xBtn">𝕏 发到 X 上炫耀一下</button>
 </div>
 
 <div class="entries">
@@ -367,6 +370,15 @@ if (navigator.clipboard && navigator.clipboard.writeText) {
 navigator.clipboard.writeText(url).then(done, function() { fallbackCopy(url, done);});
 } else fallbackCopy(url, done);
 });
+// 发到 X：一键生成带战绩的推文（X 的官方 intent 链接，点开即预填好文案和游戏链接）
+document.getElementById("xBtn").addEventListener("click", function() {
+if (lastIdx < 0) { showToast("先砸一下转盘，出了结果再发"); return; }
+var t = TIERS[lastIdx];
+var txt = "我刚在《重生之我在美国》砸出了【" + t.name + "】！" + t.identity + "，超过约" + t.beat + "%的美国人" + (myNo > 0 ? "，我是第" + myNo + "个重生的人" : "") + "。不服？你也来砸一下，看看你是什么段位👇";
+var url = "https://cfldgaga.github.io/reborn-in-usa/";
+window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(txt) + "&url=" + encodeURIComponent(url), "_blank");
+});
+
 function fallbackCopy(text, done) {
 var ta = document.createElement("textarea");
 ta.value = text;
