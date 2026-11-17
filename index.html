@@ -72,6 +72,9 @@ transition: transform.08s, box-shadow.08s;
 .spin-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 #b31b25, 0 8px 16px rgba(160,30,0,.3);}
 .spin-btn:disabled { opacity:.65; cursor:default;}
 .hint { text-align:center; font-size:13px; color:#fff3d6; margin-bottom: 10px;}
+.total-line { text-align:center; font-size:14px; font-weight:700; color:#ffe9a8; margin: 2px 0 6px; min-height:20px;}
+.my-no { margin-top:12px; display:none; background:#e63946; color:#fff; font-weight:800; font-size:16px; padding:8px 16px; border-radius:999px;}
+.my-no.on { display:inline-block;}
 
 .result { display:none; margin-top: 22px;}
 .result.show { display:block; animation: pop.45s ease;}
@@ -162,6 +165,7 @@ padding:10px 26px; border-radius:999px;}
 
 <button class="spin-btn" id="spinBtn">砸 一 下</button>
 <p class="hint">不用答题，不用填信息，点一下就出结果</p>
+<p class="total-line" id="totalLine"></p>
 
 <section class="result" id="result">
 <div class="result-title" id="resultTitle">我的战绩</div>
@@ -173,6 +177,8 @@ padding:10px 26px; border-radius:999px;}
 <div class="identity" id="identity"></div>
 <p class="comment" id="comment"></p>
 <span class="beat" id="beat"></span>
+<br>
+<span class="my-no" id="myNo"></span>
 <div class="poster-note">《重生之我在美国》 · 把这一世的段位存成图，晒给朋友看</div>
 <button type="button" class="dl-btn" id="dlBtn">💾 保存海报图</button>
 <br>
@@ -298,8 +304,29 @@ spinBtn.textContent = "再 砸 一 下";
 }, 3800);
 }
 
+// 全网计数：每砸一次 +1，显示「你是第 N 个重生在美国的人」（免费计数服务，失败则静默不显示）
+var myNo = 0;
+function countCall(path, cb) {
+var url = "https://abacus.jasoncameron.dev/" + path + "/wangboshi-reborn-usa/spins";
+var settled = false;
+var timer = setTimeout(function() { settled = true; }, 3500);
+fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+clearTimeout(timer);
+if (!settled && d && typeof d.value === "number") { settled = true; cb(d.value); }
+}).catch(function() { clearTimeout(timer); });
+}
+function fmtNo(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+countCall("get", function(v) {
+document.getElementById("totalLine").textContent = "🔥 已有 " + fmtNo(v) + " 人在美国重生过";
+});
+
 function showResult(idx, isFriend) {
 lastIdx = idx;
+if (isFriend) {
+myNo = 0;
+var mn0 = document.getElementById("myNo");
+mn0.className = "my-no"; mn0.textContent = "";
+}
 var t = TIERS[idx];
 document.getElementById("tierNo").textContent = "第 " + (idx + 1) + " 档 / 共十档";
 document.getElementById("tierName").textContent = t.name;
@@ -309,7 +336,17 @@ document.getElementById("comment").textContent = t.comment;
 document.getElementById("beat").textContent = "超过约 " + t.beat + "% 的美国人";
 result.classList.add("show");
 result.scrollIntoView({ behavior: "smooth", block: "nearest"});
-if (!isFriend) setShareResult(idx);
+if (!isFriend) {
+setShareResult(idx);
+var myNoEl = document.getElementById("myNo");
+myNoEl.className = "my-no"; myNoEl.textContent = "";
+countCall("hit", function(v) {
+myNo = v;
+myNoEl.textContent = "🎉 你是第 " + fmtNo(v) + " 个重生在美国的人";
+myNoEl.className = "my-no on";
+document.getElementById("totalLine").textContent = "🔥 已有 " + fmtNo(v) + " 人在美国重生过";
+});
+}
 }
 
 spinBtn.addEventListener("click", spin);
@@ -408,6 +445,11 @@ x.fillStyle = "#5b3400"; x.font = "29px sans-serif";
 yy = wrapText(x, t.comment, 375, yy, 520, 46); yy += 58;
 x.fillStyle = "#d35400"; x.font = "800 31px sans-serif";
 x.fillText("超过约 " + t.beat + "% 的美国人", 375, yy);
+if (myNo > 0) {
+yy += 54;
+x.fillStyle = "#e63946"; x.font = "800 30px sans-serif";
+x.fillText("你是第 " + myNo + " 个重生在美国的人", 375, yy);
+}
 
 var qrY = yy + 44, qrSize = 168, qrX = 375 - qrSize / 2;
 function drawQrCaption() {
