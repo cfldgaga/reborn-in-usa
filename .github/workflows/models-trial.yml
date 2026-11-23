@@ -16,16 +16,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -u
-          echo "=== Catalog (model ids only) ==="
-          curl -sS "https://models.github.ai/catalog/models" \
+          echo "=== Catalog raw check ==="
+          CAT_HTTP=$(curl -sS -o catalog.json -w '%{http_code}' "https://models.github.ai/catalog/models" \
             -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/json" > catalog.json || true
-          jq -r '.[].id' catalog.json 2>/dev/null | head -100 || head -c 2000 catalog.json
+            -H "Accept: application/json" || echo "CURL_ERROR")
+          echo "CATALOG_HTTP_STATUS: $CAT_HTTP"
+          echo "--- catalog.json first 800 bytes ---"
+          head -c 800 catalog.json || true
+          echo
+          echo "--- catalog ids (if JSON array) ---"
+          jq -r 'if type=="array" then .[].id else "(not an array)" end' catalog.json 2>/dev/null | head -100 || echo "(jq failed)"
           echo
           echo "=== Pick models ==="
-          M1=$(jq -r '[.[] | select(.id | test("gpt-4o-mini"; "i"))][0].id // empty' catalog.json 2>/dev/null)
-          M2=$(jq -r '[.[] | select(.id | test("deepseek"; "i"))][0].id // empty' catalog.json 2>/dev/null)
-          M3=$(jq -r '[.[] | select(.id | test("llama"; "i"))][0].id // empty' catalog.json 2>/dev/null)
+          M1=$(jq -r 'if type=="array" then ([.[] | select(.id | test("gpt-4o-mini"; "i"))][0].id // "") else "" end' catalog.json 2>/dev/null || echo "")
+          M2=$(jq -r 'if type=="array" then ([.[] | select(.id | test("deepseek"; "i"))][0].id // "") else "" end' catalog.json 2>/dev/null || echo "")
+          M3=$(jq -r 'if type=="array" then ([.[] | select(.id | test("llama"; "i"))][0].id // "") else "" end' catalog.json 2>/dev/null || echo "")
           [ -z "$M1" ] && M1="openai/gpt-4o-mini"
           [ -z "$M2" ] && M2="deepseek/DeepSeek-V3-0324"
           [ -z "$M3" ] && M3="meta/Meta-Llama-3.1-405B-Instruct"
@@ -48,7 +53,8 @@ jobs:
             echo "--- Rate-limit / notable headers ---"
             grep -iE 'ratelimit|retry-after|x-github|request-id' headers.txt || echo "(none)"
             echo "--- Response body ---"
-            cat resp.json
+            cat resp.json || true
             echo
             echo "===== END: $MODEL ====="
           done
+          echo "TRIAL_DONE"
