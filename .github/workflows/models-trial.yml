@@ -1,0 +1,54 @@
+name: Models Trial (temporary)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  models: read
+  contents: read
+
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    steps:
+      - name: GitHub Models trial via runner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          echo "=== Catalog (model ids only) ==="
+          curl -sS "https://models.github.ai/catalog/models" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/json" > catalog.json || true
+          jq -r '.[].id' catalog.json 2>/dev/null | head -100 || head -c 2000 catalog.json
+          echo
+          echo "=== Pick models ==="
+          M1=$(jq -r '[.[] | select(.id | test("gpt-4o-mini"; "i"))][0].id // empty' catalog.json 2>/dev/null)
+          M2=$(jq -r '[.[] | select(.id | test("deepseek"; "i"))][0].id // empty' catalog.json 2>/dev/null)
+          M3=$(jq -r '[.[] | select(.id | test("llama"; "i"))][0].id // empty' catalog.json 2>/dev/null)
+          [ -z "$M1" ] && M1="openai/gpt-4o-mini"
+          [ -z "$M2" ] && M2="deepseek/DeepSeek-V3-0324"
+          [ -z "$M3" ] && M3="meta/Meta-Llama-3.1-405B-Instruct"
+          echo "Selected: $M1 | $M2 | $M3"
+          PROMPT='请用中文写一段约 150 字的短视频口播稿，主题：在美国开公司，第一年最容易漏掉的三个报税时间点。'
+          for MODEL in "$M1" "$M2" "$M3"; do
+            echo
+            echo "===== MODEL: $MODEL ====="
+            BODY=$(jq -n --arg m "$MODEL" --arg p "$PROMPT" '{model:$m, messages:[{role:"user", content:$p}], temperature:0.7, max_tokens:800}')
+            START=$(date +%s)
+            HTTP=$(curl -sS -o resp.json -D headers.txt -w '%{http_code}' -X POST \
+              "https://models.github.ai/inference/chat/completions" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d "$BODY" || echo "CURL_ERROR")
+            END=$(date +%s)
+            echo "HTTP_STATUS: $HTTP"
+            echo "ELAPSED_SECONDS: $((END - START))"
+            echo "--- Rate-limit / notable headers ---"
+            grep -iE 'ratelimit|retry-after|x-github|request-id' headers.txt || echo "(none)"
+            echo "--- Response body ---"
+            cat resp.json
+            echo
+            echo "===== END: $MODEL ====="
+          done
